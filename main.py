@@ -17,7 +17,7 @@ class EffectRefreshTimer(QTimer):
         self.mw = parent
         self.selftime = 0
     def timerEvent(self, a0: QTimerEvent | None) -> None:
-        self.mw.current_effect.refresh(self.mw.rawdata.samples[self.selftime*48000 : self.selftime*48000+4800])
+        self.mw.current_effect.refresh(self.mw.rawdata.samples[self.selftime*4800 : self.selftime*4800+48000])
         self.selftime += 1
         if type(a0) == QTimerEvent:
             return a0.accept()
@@ -67,6 +67,8 @@ class MainWindow(QMainWindow):
         self.rawdata: miniaudio.DecodedSoundFile = None #type: ignore
 
         self.refresh_timer = EffectRefreshTimer(self)
+        self.refresh_timer.setTimerType(Qt.TimerType.CoarseTimer)
+        self.refresh_timer.setInterval(100)
 
     def init(self):
         self.refresh_timer.selftime = 0
@@ -95,7 +97,7 @@ class MainWindow(QMainWindow):
             self.playbtn.setText('Pause')
             self.playing = True
             self.audio_device.start(self.stream)
-            self.refresh_timer.startTimer(1000, Qt.TimerType.CoarseTimer)
+            self.refresh_timer.start()
         elif self.file != None:
             self.refresh_timer.stop()
             self.playbtn.setText('Play')
