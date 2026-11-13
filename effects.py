@@ -5,11 +5,12 @@ from array import array
 from PIL import Image, ImageDraw
 import numpy as np
 from miniaudio import convert_frames, SampleFormat
+import colorsys
 
 class FrequencyEffect(QHBoxLayout):
     @staticmethod
-    def get_values_for_frame(frame: array):
-        f = 20
+    def get_values_for_frame(frame: array, sample_rate: int):
+        f = sample_rate//len(frame)*2
         result = convert_frames(SampleFormat.SIGNED16, 1, 48000, frame.tobytes(), SampleFormat.SIGNED16, 1, 96000)
 
         vals = abs(np.fft.fft(array('h', result)))
@@ -48,8 +49,8 @@ class FrequencyEffect(QHBoxLayout):
             self.progress_bars[-1].setOrientation(Qt.Orientation.Vertical)
             self.addWidget(self.progress_bars[-1])
     
-    def refresh(self, frame: array):
-        v = self.get_values_for_frame(frame)
+    def refresh(self, frame: array, sample_rate: int):
+        v = self.get_values_for_frame(frame, sample_rate)
         for i in range(9):
             self.progress_bars[i].setValue(int(v[i]))
 
@@ -62,7 +63,6 @@ def safe_int(input):
 class PreciseFrequencyEffect(QHBoxLayout):
     @staticmethod
     def get_values_for_frame(frame: array):
-
         result = convert_frames(SampleFormat.SIGNED16, 1, 48000, frame.tobytes(), SampleFormat.SIGNED16, 1, 96000)
 
         vals = abs(np.fft.fft(array('h', result)))
@@ -70,9 +70,10 @@ class PreciseFrequencyEffect(QHBoxLayout):
         img = Image.new('RGBA', (400, 200), (255, 255, 255, 255))
         imgdraw = ImageDraw.ImageDraw(img)
         average = 0
+        f = len(vals)//400
         for x in range(400):
             val = 0
-            for i in range(x*3, x*3+3):
+            for i in range(x*f, x*f+f):
                 val += vals[i]
             values.append(val)
             average += val
@@ -80,7 +81,13 @@ class PreciseFrequencyEffect(QHBoxLayout):
         average /= 200
             
         for x in range(400):
-            imgdraw.line(((x, 199-min(safe_int(199 * values[x] / average), 199)), (x, 199)), fill=(0, 0, 0, 255))
+            if x < 200:
+                v = x
+            else:
+                v = 200 - (x % 200)
+            v /= 200
+            color = [0, 0, 0]
+            imgdraw.line(((x, 199-min(safe_int(199 * values[x] / average), 199)), (x, 199)), fill=(int(color[0] * 255), int(color[1] * 255), int(color[2] * 255), 255))
 
         return img
     
@@ -90,7 +97,7 @@ class PreciseFrequencyEffect(QHBoxLayout):
         self.imgl.setPixmap(Image.new('RGBA', (400, 200), (255, 255, 255, 255)).toqpixmap())
         self.addWidget(self.imgl)
     
-    def refresh(self, frame: array):
+    def refresh(self, frame: array, sample_rate: int):
         img = self.get_values_for_frame(frame)
         self.imgl.setPixmap(img.toqpixmap())
 
@@ -108,9 +115,10 @@ class AmplitudeEffect(QHBoxLayout):
     def get_values_for_frame(self, frame: array):
         values = []
         maxim = 8732500
+        f = len(frame) // 9
         for i in range(9):
-            frm = i * 533
-            to = i * 533 + 533
+            frm = i * f
+            to = i * f + f
             val = 0
             for j in range(frm, to):
                 val += abs(frame[j])
@@ -121,7 +129,7 @@ class AmplitudeEffect(QHBoxLayout):
             values[i] = min(round(values[i]), 100)
         return values
     
-    def refresh(self, frame: array):
+    def refresh(self, frame: array, sample_rate: int):
         v = self.get_values_for_frame(frame)
         for i in range(9):
             self.progress_bars[i].setValue(int(v[i]))
@@ -133,9 +141,10 @@ class PreciseAmplitudeffect(QHBoxLayout):
         img = Image.new('RGBA', (400, 200), (255, 255, 255, 255))
         imgdraw = ImageDraw.ImageDraw(img)
         maxim = 196700
+        f = len(frame) // 400
         for x in range(400):
             val = 0
-            for i in range(x*12, x*12+12):
+            for i in range(x*f, x*f+f):
                 val += frame[i]
             print(val)
             values.append(val)
@@ -151,6 +160,6 @@ class PreciseAmplitudeffect(QHBoxLayout):
         self.imgl.setPixmap(Image.new('RGBA', (400, 200), (255, 255, 255, 255)).toqpixmap())
         self.addWidget(self.imgl)
     
-    def refresh(self, frame: array):
+    def refresh(self, frame: array, sample_rate: int):
         img = self.get_values_for_frame(frame)
         self.imgl.setPixmap(img.toqpixmap())

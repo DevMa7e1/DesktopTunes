@@ -8,30 +8,9 @@ from pathlib import Path
 from PIL import Image
 from io import BytesIO
 import effects
-from array import array
-from time import time
+import backend
 
 app = QApplication(sys.argv)
-
-class EffectRefreshTimer(QTimer):
-    def __init__(self, /, parent: MainWindow) -> None:
-        super().__init__(parent)
-        self.mw = parent
-        self.selftime = 0
-    def timerEvent(self, a0: QTimerEvent | None) -> None:
-        frame = array('h')
-        window = self.mw.rawdata.samples[self.selftime*9600 : self.selftime*9600+9600]
-        for i in range(9600):
-            if i % 2 == 0:
-                frame.append(window[i])
-        self.mw.current_effect.refresh(frame)
-        self.selftime += 1
-        if self.selftime*9600+9600 >= len(self.mw.rawdata.samples):
-            self.mw.end()
-        if type(a0) == QTimerEvent:
-            return a0.accept()
-        else:
-            return None
 
 class MainWindow(QMainWindow):
     def __init__(self, /, parent: QWidget | None = None) -> None:
@@ -76,18 +55,18 @@ class MainWindow(QMainWindow):
         self.file: str = None #type: ignore
         self.rawdata: miniaudio.DecodedSoundFile = None #type: ignore
 
-        self.refresh_timer = EffectRefreshTimer(self)
-        self.refresh_timer.setTimerType(Qt.TimerType.CoarseTimer)
-        self.refresh_timer.setInterval(100)
+        self.event_updater = backend.EventUpdater(self)
 
     def end(self):
         self.stop()
 
     def init(self):
-        self.refresh_timer.selftime = 0
+        self.event_updater.cursor = 0
         self.playing = False
-        self.audio_device = miniaudio.PlaybackDevice()
-        self.stream = miniaudio.stream_file(self.file)
+        self.rawdata = miniaudio.decode_file(self.file, sample_rate=48000, output_format=miniaudio.SampleFormat.SIGNED16)
+        self.audio_device = miniaudio.PlaybackDevice(self.rawdata.sample_format, self.rawdata.nchannels, self.rawdata.sample_rate, buffersize_msec=100)
+        self.stream = backend.stream(BytesIO(self.rawdata.samples.tobytes()), self.event_updater, self.rawdata.sample_rate)
+        self.stream.send(None)
         match miniaudio.get_file_info(self.file).file_format.name:
             case 'FLAC':
                 self.information = flac.FLAC(self.file)
@@ -109,23 +88,19 @@ class MainWindow(QMainWindow):
                     self.coverl.setPixmap(Image.new('RGBA', (100, 100), (255, 255, 255, 255)).toqpixmap())
             case _:
                 self.coverl.setPixmap(Image.new('RGBA', (100, 100), (255, 255, 255, 255)).toqpixmap())
-        self.rawdata = miniaudio.decode_file(self.file, sample_rate=48000, output_format=miniaudio.SampleFormat.SIGNED16)
         
     def play(self):
         if not self.playing and self.file != None:
             self.playbtn.setText('Pause')
             self.playing = True
             self.audio_device.start(self.stream)
-            self.refresh_timer.start()
         elif self.file != None:
-            self.refresh_timer.stop()
             self.playbtn.setText('Play')
             self.playing = False
             self.audio_device.stop()
 
     def stop(self):
         if self.file != None:
-            self.refresh_timer.stop()
             self.playing = False
             self.playbtn.setText('Play')
             self.audio_device.close()
