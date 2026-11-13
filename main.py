@@ -17,7 +17,7 @@ class EffectRefreshTimer(QTimer):
         self.mw = parent
         self.selftime = 0
     def timerEvent(self, a0: QTimerEvent | None) -> None:
-        self.mw.current_effect.refresh(self.mw.rawdata.samples[self.selftime*4800 : self.selftime*4800+48000])
+        self.mw.current_effect.refresh(self.mw.rawdata.samples[self.selftime*4800 : self.selftime*4800+4800])
         self.selftime += 1
         if type(a0) == QTimerEvent:
             return a0.accept()
@@ -29,16 +29,18 @@ class MainWindow(QMainWindow):
         super().__init__(parent)
         self.setWindowTitle('DesktopTunes')
         
-        mainbox = QVBoxLayout()
+        mainbox = QHBoxLayout()
         mainbox.setAlignment(Qt.AlignmentFlag.AlignTop)
         maincontainer = QWidget()
         maincontainer.setLayout(mainbox)
 
-        self.coverl = QLabel()
-        mainbox.addWidget(self.coverl)
-
-        buttons = QHBoxLayout()
+        buttons = QVBoxLayout()
         buttons.setAlignment(Qt.AlignmentFlag.AlignLeft)
+
+        pickbtn = QPushButton()
+        pickbtn.setText('Open')
+        pickbtn.pressed.connect(self.open)
+        buttons.addWidget(pickbtn)
 
         self.playbtn = QPushButton()
         self.playbtn.setText('Play')
@@ -50,15 +52,14 @@ class MainWindow(QMainWindow):
         self.stopbtn.pressed.connect(self.stop)
         buttons.addWidget(self.stopbtn)
 
-        mainbox.addLayout(buttons)
-
-        pickbtn = QPushButton()
-        pickbtn.setText('Open an audio file')
-        pickbtn.pressed.connect(self.open)
-        mainbox.addWidget(pickbtn)
+        self.coverl = QLabel()
+        self.coverl.setPixmap(Image.new('RGBA', (100, 100), (255, 255, 255, 255)).toqpixmap())
+        buttons.addWidget(self.coverl)
 
         self.current_effect = effects.FrequencyEffect(self)
         mainbox.addLayout(self.current_effect)
+
+        mainbox.addLayout(buttons)
 
         self.setCentralWidget(maincontainer)
 
@@ -90,7 +91,7 @@ class MainWindow(QMainWindow):
                     img = Image.open(BytesIO(mp3pic.data))
                     img = img.resize([100, int(100 / img.width * img.height)])
                     self.coverl.setPixmap(img.toqpixmap())
-        self.rawdata = miniaudio.decode_file(self.file, sample_rate=48000)
+        self.rawdata = miniaudio.decode_file(self.file, sample_rate=48000, output_format=miniaudio.SampleFormat.SIGNED16)
         
     def play(self):
         if not self.playing and self.file != None:
