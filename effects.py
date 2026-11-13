@@ -4,13 +4,15 @@ from PyQt6.QtCore import Qt
 from array import array
 from PIL import Image, ImageDraw
 import numpy as np
-import math
+from miniaudio import convert_frames, SampleFormat
 
 class FrequencyEffect(QHBoxLayout):
     @staticmethod
     def get_values_for_frame(frame: array):
         f = 20
-        vals = abs(np.fft.fft(frame))
+        result = convert_frames(SampleFormat.SIGNED16, 1, 48000, frame.tobytes(), SampleFormat.SIGNED16, 1, 96000)
+
+        vals = abs(np.fft.fft(array('h', result)))
         intervals = [60, 120, 240, 480, 960, 1920, 3840, 7680, 15360]
         values = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
         average = 0
@@ -33,7 +35,7 @@ class FrequencyEffect(QHBoxLayout):
             values[i] /= average
             values[i] *= 100
             values[i] = min(values[i], 100)
-            values[i] = round(values[i])
+            values[i] = safe_int(values[i])
         return values
     
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -51,17 +53,26 @@ class FrequencyEffect(QHBoxLayout):
         for i in range(9):
             self.progress_bars[i].setValue(int(v[i]))
 
+def safe_int(input):
+    try:
+        return int(input)
+    except:
+        return 0
+
 class PreciseFrequencyEffect(QHBoxLayout):
     @staticmethod
     def get_values_for_frame(frame: array):
-        vals = abs(np.fft.fft(frame))
+
+        result = convert_frames(SampleFormat.SIGNED16, 1, 48000, frame.tobytes(), SampleFormat.SIGNED16, 1, 96000)
+
+        vals = abs(np.fft.fft(array('h', result)))
         values = []
         img = Image.new('RGBA', (400, 200), (255, 255, 255, 255))
         imgdraw = ImageDraw.ImageDraw(img)
         average = 0
         for x in range(400):
             val = 0
-            for i in range(x*6, x*6+6):
+            for i in range(x*3, x*3+3):
                 val += vals[i]
             values.append(val)
             average += val
@@ -69,7 +80,7 @@ class PreciseFrequencyEffect(QHBoxLayout):
         average /= 200
             
         for x in range(400):
-            imgdraw.line(((x, 199-min(int(199 * values[x] / average), 199)), (x, 199)), fill=(0, 0, 0, 255))
+            imgdraw.line(((x, 199-min(safe_int(199 * values[x] / average), 199)), (x, 199)), fill=(0, 0, 0, 255))
 
         return img
     

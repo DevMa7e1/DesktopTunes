@@ -8,6 +8,8 @@ from pathlib import Path
 from PIL import Image
 from io import BytesIO
 import effects
+from array import array
+from time import time
 
 app = QApplication(sys.argv)
 
@@ -17,8 +19,15 @@ class EffectRefreshTimer(QTimer):
         self.mw = parent
         self.selftime = 0
     def timerEvent(self, a0: QTimerEvent | None) -> None:
-        self.mw.current_effect.refresh(self.mw.rawdata.samples[self.selftime*4800 : self.selftime*4800+4800])
+        frame = array('h')
+        window = self.mw.rawdata.samples[self.selftime*9600 : self.selftime*9600+9600]
+        for i in range(9600):
+            if i % 2 == 0:
+                frame.append(window[i])
+        self.mw.current_effect.refresh(frame)
         self.selftime += 1
+        if self.selftime*9600+9600 >= len(self.mw.rawdata.samples):
+            self.mw.end()
         if type(a0) == QTimerEvent:
             return a0.accept()
         else:
@@ -71,6 +80,9 @@ class MainWindow(QMainWindow):
         self.refresh_timer.setTimerType(Qt.TimerType.CoarseTimer)
         self.refresh_timer.setInterval(100)
 
+    def end(self):
+        self.stop()
+
     def init(self):
         self.refresh_timer.selftime = 0
         self.playing = False
@@ -84,6 +96,8 @@ class MainWindow(QMainWindow):
                     img = Image.open(BytesIO(flacpic.data))
                     img = img.resize([100, int(100 / img.width * img.height)])
                     self.coverl.setPixmap(img.toqpixmap())
+                else:
+                    self.coverl.setPixmap(Image.new('RGBA', (100, 100), (255, 255, 255, 255)).toqpixmap())
             case 'MP3':
                 self.information = id3.ID3(self.file)
                 if 'APIC:' in self.information.keys():
@@ -91,6 +105,10 @@ class MainWindow(QMainWindow):
                     img = Image.open(BytesIO(mp3pic.data))
                     img = img.resize([100, int(100 / img.width * img.height)])
                     self.coverl.setPixmap(img.toqpixmap())
+                else:
+                    self.coverl.setPixmap(Image.new('RGBA', (100, 100), (255, 255, 255, 255)).toqpixmap())
+            case _:
+                self.coverl.setPixmap(Image.new('RGBA', (100, 100), (255, 255, 255, 255)).toqpixmap())
         self.rawdata = miniaudio.decode_file(self.file, sample_rate=48000, output_format=miniaudio.SampleFormat.SIGNED16)
         
     def play(self):
@@ -116,11 +134,12 @@ class MainWindow(QMainWindow):
     def open(self):
         fd = QFileDialog()
         names = fd.getOpenFileNames(self, 'Open an audio file', filter='Audio files (*.wav *.flac *.mp3 *.ogg)')
-        if names[0] != '':
-            self.stop()
-            self.file = names[0][0]
-            self.setWindowTitle(Path(self.file).name + ' - DesktopTunes')
-            self.init()
+        if len(names[0]) > 0:
+            if names[0][0] != '':
+                self.stop()
+                self.file = names[0][0]
+                self.setWindowTitle(Path(self.file).name + ' - DesktopTunes')
+                self.init()
 
 
 window = MainWindow()
