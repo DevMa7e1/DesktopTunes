@@ -101,7 +101,7 @@ class PreciseFrequencyEffect(QHBoxLayout):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.imgl = QLabel()
-        self.imgl.setPixmap(Image.new('RGBA', (400, 200), (255, 255, 255, 255)).toqpixmap())
+        self.imgl.setPixmap(Image.new('RGBA', (400, 200), (0, 0, 0, 255)).toqpixmap())
         self.addWidget(self.imgl)
     
     def refresh(self, frame: array, sample_rate: int):

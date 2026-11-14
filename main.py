@@ -59,8 +59,9 @@ class MainWindow(QMainWindow):
 
         self.playing = False
         self.ended = False
-        self.file: str = None #type: ignore
-        self.rawdata: miniaudio.DecodedSoundFile = None #type: ignore
+        self.data_stream = BytesIO()
+        self.files = []
+        self.filei = 0
 
         self.event_updater = backend.EventUpdater(self)
 
@@ -76,13 +77,34 @@ class MainWindow(QMainWindow):
             self.ended = False
         self.event_updater.cursor = 0
         self.playing = False
-        self.rawdata = miniaudio.decode_file(self.file, sample_rate=48000, output_format=miniaudio.SampleFormat.SIGNED16)
-        self.audio_device = miniaudio.PlaybackDevice(self.rawdata.sample_format, self.rawdata.nchannels, self.rawdata.sample_rate, buffersize_msec=100)
-        self.stream = backend.stream(BytesIO(self.rawdata.samples.tobytes()), self.event_updater, self.rawdata.sample_rate)
+        self.audio_device = miniaudio.PlaybackDevice(miniaudio.SampleFormat.SIGNED16, 2, 48000, buffersize_msec=100)
+        self.stream = backend.stream(self.data_stream, self.event_updater, 48000)
         self.stream.send(None)
-        match miniaudio.get_file_info(self.file).file_format.name:
+        
+    def play(self):
+        if not self.ended:
+            if not self.playing:
+                self.playbtn.setText('Pause')
+                self.playing = True
+                self.audio_device.start(self.stream)
+            else:
+                self.playbtn.setText('Play')
+                self.playing = False
+                self.audio_device.stop()
+
+    def stop(self):
+        if not self.ended:
+            self.playing = False
+            self.playbtn.setText('Play')
+            self.audio_device.stop()
+            self.audio_device.close()
+            self.data_stream.seek(0)
+            self.init()
+
+    def show_cover(self):
+        match miniaudio.get_file_info(self.files[self.filei][0]).file_format.name:
             case 'FLAC':
-                self.information = flac.FLAC(self.file)
+                self.information = flac.FLAC(self.files[self.filei][0])
                 if len(self.information.pictures) > 0:
                     flacpic: flac.Picture = self.information.pictures[0]
                     img = Image.open(BytesIO(flacpic.data))
@@ -91,7 +113,7 @@ class MainWindow(QMainWindow):
                 else:
                     self.coverl.setPixmap(Image.new('RGBA', (100, 100), (255, 255, 255, 255)).toqpixmap())
             case 'MP3':
-                self.information = id3.ID3(self.file)
+                self.information = id3.ID3(self.files[self.filei][0])
                 if 'APIC:' in self.information.keys():
                     mp3pic = self.information['APIC:']
                     img = Image.open(BytesIO(mp3pic.data))
@@ -101,35 +123,27 @@ class MainWindow(QMainWindow):
                     self.coverl.setPixmap(Image.new('RGBA', (100, 100), (255, 255, 255, 255)).toqpixmap())
             case _:
                 self.coverl.setPixmap(Image.new('RGBA', (100, 100), (255, 255, 255, 255)).toqpixmap())
-        
-    def play(self):
-        if not self.ended:
-            if not self.playing and self.file != None:
-                self.playbtn.setText('Pause')
-                self.playing = True
-                self.audio_device.start(self.stream)
-            elif self.file != None:
-                self.playbtn.setText('Play')
-                self.playing = False
-                self.audio_device.stop()
-
-    def stop(self):
-        if self.file != None:
-            self.playing = False
-            self.playbtn.setText('Play')
-            self.audio_device.close()
-            self.init()
-
+    
     def open(self):
         fd = QFileDialog()
         names = fd.getOpenFileNames(self, 'Open an audio file', filter='Audio files (*.wav *.flac *.mp3 *.ogg)')
         if len(names[0]) > 0:
-            if names[0][0] != '':
-                if not self.ended:
-                    self.stop()
-                self.file = names[0][0]
-                self.setWindowTitle(Path(self.file).name + ' - DesktopTunes')
-                self.init()
+            self.data_stream.close()
+            self.data_stream = BytesIO()
+            self.files.clear()
+            self.filei = 0
+            for name in names[0]:
+                if name != '':
+                    if not self.ended and self.playing:
+                        self.stop()
+                    self.setWindowTitle('DesktopTunes')
+                    self.data_stream.write(miniaudio.decode_file(name, sample_rate=48000, output_format=miniaudio.SampleFormat.SIGNED16).samples.tobytes())
+                    self.files.append((name, self.data_stream.seek(0, 1)))
+            self.data_stream.seek(0)
+            self.setWindowTitle(Path(self.files[0][0]).name + ' - DesktopTunes')
+            self.show_cover()
+            
+            self.init()
 
 
 window = MainWindow()
