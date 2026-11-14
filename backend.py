@@ -1,6 +1,5 @@
 from io import BytesIO
 from array import array
-from time import time
 
 class EventUpdater:
     def __init__(self, mainwindow) -> None:
@@ -21,8 +20,8 @@ def stream(data: BytesIO, event_updater: EventUpdater, sample_rate: int):
     while True:
         required_bytes = required_frames * 2 * 2
         sample_data = data.read(required_bytes)
-        event_updater.update_event(required_frames, sample_rate)
         if not sample_data:
             event_updater.mw.end()
             break
+        event_updater.update_event(required_frames, sample_rate)
         required_frames = yield sample_data

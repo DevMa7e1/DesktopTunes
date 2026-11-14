@@ -5,7 +5,6 @@ from array import array
 from PIL import Image, ImageDraw
 import numpy as np
 from miniaudio import convert_frames, SampleFormat
-import colorsys
 
 class FrequencyEffect(QHBoxLayout):
     @staticmethod
@@ -67,27 +66,35 @@ class PreciseFrequencyEffect(QHBoxLayout):
 
         vals = abs(np.fft.fft(array('h', result)))
         values = []
-        img = Image.new('RGBA', (400, 200), (255, 255, 255, 255))
+        img = Image.new('RGBA', (400, 200), (0, 0, 0, 255))
         imgdraw = ImageDraw.ImageDraw(img)
         average = 0
-        f = len(vals)//400
-        for x in range(400):
+        f = len(vals)//1600
+        for x in range(1600):
             val = 0
             for i in range(x*f, x*f+f):
                 val += vals[i]
             values.append(val)
-            average += val
+
+        for i in range(200):
+            average += values[i]
+        for i in range(1400, 1600):
+            average += values[i]
 
         average /= 200
             
         for x in range(400):
+            if x <= 200:
+                index = x
+            else:
+                index = 1200 + x
             if x < 200:
                 v = x
             else:
                 v = 200 - (x % 200)
             v /= 200
-            color = [0, 0, 0]
-            imgdraw.line(((x, 199-min(safe_int(199 * values[x] / average), 199)), (x, 199)), fill=(int(color[0] * 255), int(color[1] * 255), int(color[2] * 255), 255))
+            color = [0.6*v, 0.18 + (0.16 * v), 0.9 - (0.22 * v)]
+            imgdraw.line(((x, 199-min(safe_int(199 * values[index] / average), 199)), (x, 199)), fill=(int(color[0] * 255), int(color[1] * 255), int(color[2] * 255), 255))
 
         return img
     

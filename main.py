@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QLabel, QPushButton, QVBoxLayout, QHBoxLayout, QFileDialog
-from PyQt6.QtCore import QTimerEvent, Qt, QTimer
+from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont, QFontDatabase
 import miniaudio
 from mutagen import flac, id3
@@ -18,11 +18,13 @@ class MainWindow(QMainWindow):
         self.setWindowTitle('DesktopTunes')
         
         mainbox = QHBoxLayout()
+        mainbox.setContentsMargins(8, 4, 4, 4)
         mainbox.setAlignment(Qt.AlignmentFlag.AlignTop)
         maincontainer = QWidget()
         maincontainer.setLayout(mainbox)
 
         buttons = QVBoxLayout()
+        buttons.setContentsMargins(4, 8, 4, 8)
         buttons.setAlignment(Qt.AlignmentFlag.AlignLeft)
 
         pickbtn = QPushButton()
@@ -44,23 +46,34 @@ class MainWindow(QMainWindow):
         self.coverl.setPixmap(Image.new('RGBA', (100, 100), (255, 255, 255, 255)).toqpixmap())
         buttons.addWidget(self.coverl)
 
-        self.current_effect = effects.FrequencyEffect(self)
-        mainbox.addLayout(self.current_effect)
+        self.current_effect = effects.PreciseFrequencyEffect(self)
+        self.current_effect.setContentsMargins(0, 0, 0, 0)
+        effect_container = QWidget()
+        effect_container.setStyleSheet('border-style: solid; border-width: 4px; border-color: #AAAAAA;')
+        effect_container.setLayout(self.current_effect)
+        mainbox.addWidget(effect_container, alignment=Qt.AlignmentFlag.AlignCenter)
 
         mainbox.addLayout(buttons)
 
         self.setCentralWidget(maincontainer)
 
         self.playing = False
+        self.ended = False
         self.file: str = None #type: ignore
         self.rawdata: miniaudio.DecodedSoundFile = None #type: ignore
 
         self.event_updater = backend.EventUpdater(self)
 
     def end(self):
-        self.stop()
+        self.ended = True
+        self.playing = False
+        self.playbtn.setText('Play')
 
     def init(self):
+        if self.ended:
+            self.audio_device.stop()
+            self.audio_device.close()
+            self.ended = False
         self.event_updater.cursor = 0
         self.playing = False
         self.rawdata = miniaudio.decode_file(self.file, sample_rate=48000, output_format=miniaudio.SampleFormat.SIGNED16)
@@ -90,14 +103,15 @@ class MainWindow(QMainWindow):
                 self.coverl.setPixmap(Image.new('RGBA', (100, 100), (255, 255, 255, 255)).toqpixmap())
         
     def play(self):
-        if not self.playing and self.file != None:
-            self.playbtn.setText('Pause')
-            self.playing = True
-            self.audio_device.start(self.stream)
-        elif self.file != None:
-            self.playbtn.setText('Play')
-            self.playing = False
-            self.audio_device.stop()
+        if not self.ended:
+            if not self.playing and self.file != None:
+                self.playbtn.setText('Pause')
+                self.playing = True
+                self.audio_device.start(self.stream)
+            elif self.file != None:
+                self.playbtn.setText('Play')
+                self.playing = False
+                self.audio_device.stop()
 
     def stop(self):
         if self.file != None:
@@ -111,7 +125,8 @@ class MainWindow(QMainWindow):
         names = fd.getOpenFileNames(self, 'Open an audio file', filter='Audio files (*.wav *.flac *.mp3 *.ogg)')
         if len(names[0]) > 0:
             if names[0][0] != '':
-                self.stop()
+                if not self.ended:
+                    self.stop()
                 self.file = names[0][0]
                 self.setWindowTitle(Path(self.file).name + ' - DesktopTunes')
                 self.init()
