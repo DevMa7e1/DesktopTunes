@@ -157,7 +157,7 @@ class MainWindow(QMainWindow):
         self.stream.send(None)
         
     def play(self):
-        if not self.ended:
+        if not self.ended and len(self.files) > 0:
             if not self.playing:
                 self.playbtn.setText('Pause')
                 self.playing = True
@@ -168,7 +168,7 @@ class MainWindow(QMainWindow):
                 self.audio_device.stop()
 
     def stop(self):
-        if not self.ended:
+        if not self.ended and len(self.files) > 0:
             self.playing = False
             self.playbtn.setText('Play')
             self.audio_device.stop()
