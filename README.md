@@ -1,4 +1,5 @@
 # DesktopTunes
+<img width="590" height="320" src="https://github.com/user-attachments/assets/3eab8683-9355-42a8-90e0-e702d7378dcf" /><br>
 Simple music player with fun visuals that react to your music
 
 ## Download links
@@ -19,7 +20,7 @@ After unzipping the archive which contains the Windows build, you're going to ha
 
 Please note, it might take a little while for the main window to appear.
 
-## How to use DesktopTunes?
+## How to use DesktopTunes
 * ### Playing an audio file
     After opening the program, press on the **Open** button. A file dialog will appear from which you can select the audio file(s) that you want to play. The program supports playing the following formats: 
     | Format | What works |
