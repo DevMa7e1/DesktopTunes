@@ -94,7 +94,7 @@ class PreciseFrequencyEffect(QHBoxLayout):
                 v = 200 - (x % 200)
             v /= 200
             color = [0.6*v, 0.18 + (0.16 * v), 0.9 - (0.22 * v)]
-            imgdraw.line(((x, 199-min(safe_int(199 * values[index] / average), 199)), (x, 199)), fill=(int(color[0] * 255), int(color[1] * 255), int(color[2] * 255), 255))
+            imgdraw.line(((x, 199-min(safe_int(199 * values[index] / (average+1)), 199)), (x, 199)), fill=(int(color[0] * 255), int(color[1] * 255), int(color[2] * 255), 255))
 
         return img
     
@@ -102,6 +102,7 @@ class PreciseFrequencyEffect(QHBoxLayout):
         super().__init__(parent)
         self.imgl = QLabel()
         self.imgl.setPixmap(Image.new('RGBA', (400, 200), (0, 0, 0, 255)).toqpixmap())
+        self.imgl.setStyleSheet('border-style: solid; border-width: 4px; border-color: #AAAAAA;')
         self.addWidget(self.imgl)
     
     def refresh(self, frame: array, sample_rate: int):
@@ -141,11 +142,11 @@ class AmplitudeEffect(QHBoxLayout):
         for i in range(9):
             self.progress_bars[i].setValue(int(v[i]))
 
-class PreciseAmplitudeffect(QHBoxLayout):
+class PreciseAmplitudeEffect(QHBoxLayout):
     @staticmethod
     def get_values_for_frame(frame: array):
         values = []
-        img = Image.new('RGBA', (400, 200), (255, 255, 255, 255))
+        img = Image.new('RGBA', (400, 200), (0, 0, 0, 255))
         imgdraw = ImageDraw.ImageDraw(img)
         maxim = 196700
         f = len(frame) // 400
@@ -153,18 +154,20 @@ class PreciseAmplitudeffect(QHBoxLayout):
             val = 0
             for i in range(x*f, x*f+f):
                 val += frame[i]
-            print(val)
             values.append(val)
             
         for x in range(400):
-            imgdraw.line(((x, 199-min(int(199 * values[x] / maxim), 199)), (x, 199)), fill=(0, 0, 0, 255))
+            v = x / 400
+            color = [0.6*v, 0.18 + (0.16 * v), 0.9 - (0.22 * v)]
+            imgdraw.line(((x, 199-min(int(199 * values[x] / maxim), 199)), (x, 199)), fill=(int(color[0]*255), int(color[1]*255), int(color[2]*255), 255))
 
         return img
     
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.imgl = QLabel()
-        self.imgl.setPixmap(Image.new('RGBA', (400, 200), (255, 255, 255, 255)).toqpixmap())
+        self.imgl.setPixmap(Image.new('RGBA', (400, 200), (0, 0, 0, 255)).toqpixmap())
+        self.imgl.setStyleSheet('border-style: solid; border-width: 4px; border-color: #AAAAAA;')
         self.addWidget(self.imgl)
     
     def refresh(self, frame: array, sample_rate: int):
