@@ -43,7 +43,7 @@ Please note, it might take a little while for the main window to appear.
     Please note, the change only applies to files that you open after adjusting the setting. The files opened before changing the setting will still fade-out automatically.
 
     Not all songs are meant to be played in gapless mode. If you hear clicking at the transition from a song to another, you might want to consider disabling gapless playback.
-
+## How to build the binary
 ### Linux
 1. Install all necessary tools
     
@@ -62,7 +62,7 @@ Please note, it might take a little while for the main window to appear.
 
 The resulting executable can be found in the **dist** folder.
 
-## Windows
+### Windows
 1. Install the latest version of Python
 2. [Download the source code of DesktopTunes](https://github.com/DevMa7e1/DesktopTunes/archive/refs/heads/main.zip)
 3. Unzip it and go into the created folder
