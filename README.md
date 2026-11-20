@@ -4,7 +4,7 @@ Simple music player with fun visuals that react to your music
 
 ## Download links
 * ### Windows
-    x86_64 binary --> [Download here](https://github.com/DevMa7e1/DesktopTunes/releases/download/v1.0.0/DesktopTunes-Windows.ziphttps://github.com/DevMa7e1/DesktopTunes/releases/download/v1.0.0/DesktopTunes-Windows.zip)
+    x86_64 binary --> [Download here](https://github.com/DevMa7e1/DesktopTunes/releases/download/v1.0.0/DesktopTunes-Windows.zip)
 
 * ### Linux
     x86_64 binary --> [Download here](https://github.com/DevMa7e1/DesktopTunes/releases/download/v1.0.0/DesktopTunes-Linux.zip)
